@@ -1,51 +1,117 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using AutoFixture;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Mongo.Console
 {
     public class Program
     {
+        private const string filePath = @"C:\Temp\sample.json";
+        private static List<Product> products = new();
+        private static List<WriteModel<Product>> productWriteModels = new();
+
         static async Task Main(string[] args)
         {
-            System.Console.WriteLine(DateTime.Now.ToLongTimeString());
+            try
+            {
+                System.Console.WriteLine($"Start: {DateTime.Now.ToLongTimeString()}");
 
-            var collection = GetCollection();
+                //await WriteJson(1000000);
 
-            var id = Guid.NewGuid().ToString();
-            var list = GetSampleData(100000);
+                //var collection = GetCollection();
+                //var list = GetSampleData(100000);
+                //await UpsertAsync(collection, list);
 
-            await UpsertAsync(collection, list);
+                //LoadJson();
+                //var collection = GetCollection();
+                //await UpsertAsync(collection, products);
 
-            System.Console.WriteLine(DateTime.Now.ToLongTimeString());
+                await Bulk();
+
+                System.Console.WriteLine($"End: {DateTime.Now.ToLongTimeString()}");
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine(e);
+                throw;
+            }
 
             System.Console.ReadKey();
         }
 
-        private static IEnumerable<TestEntity> GetSampleData(int count)
+        private static async Task Bulk()
         {
-            // timer
-            var watch = new Stopwatch();
-            watch.Start();
+            using var streamReader = new StreamReader(filePath);
+            using var reader = new JsonTextReader(streamReader);
+            var serializer = new Newtonsoft.Json.JsonSerializer();
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonToken.StartObject)
+                {
+                    var productData = serializer.Deserialize<Product>(reader);
+                    await ProcessProductData(productData);
+                }
+            }
+        }
+
+        private static async Task ProcessProductData(Product productData)
+        {
+            //System.Console.WriteLine($"productCode:{productData.Code}");
+            products.Add(productData);
+            if (products.Count % 10000 == 0)
+            {
+                var collection = GetCollection();
+                await UpsertAsync(collection, products);
+                products.Clear();
+            }
+        }
+
+        private static async Task WriteJson(int count)
+        {
+            System.Console.WriteLine($"WriteJson Start: {DateTime.Now.ToLongTimeString()}");
+
+            var data = GetSampleData(count);
+            await using FileStream fileStream = File.Create(filePath);
+            await JsonSerializer.SerializeAsync(fileStream, data);
+
+            System.Console.WriteLine($"WriteJson End: {DateTime.Now.ToLongTimeString()}");
+        }
+
+        public static void LoadJson()
+        {
+            System.Console.WriteLine($"LoadJson Start: {DateTime.Now.ToLongTimeString()}");
+
+            using var streamReader = new StreamReader(filePath);
+            var jsonString = streamReader.ReadToEnd();
+            products = JsonSerializer.Deserialize<List<Product>>(jsonString);
+
+            System.Console.WriteLine($"LoadJson Count: {products.Count}");
+            System.Console.WriteLine($"LoadJson End: {DateTime.Now.ToLongTimeString()}");
+        }
+
+        private static IEnumerable<Product> GetSampleData(int count)
+        {
+            System.Console.WriteLine($"GetSampleData Start: {DateTime.Now.ToLongTimeString()}");
 
             var fixture = new Fixture();
-            var list = fixture.CreateMany<TestEntity>(count);
+            var list = fixture.CreateMany<Product>(count);
 
-            // stop timer
-            watch.Stop();
-            System.Console.WriteLine($"Fixture ItemCount:{count} row, ElapsedTime:{watch.Elapsed.Milliseconds} ms");
+            System.Console.WriteLine($"GetSampleData End: {DateTime.Now.ToLongTimeString()}");
 
             return list;
         }
 
-        private static IMongoCollection<TestEntity> GetCollection()
+        private static IMongoCollection<Product> GetCollection()
         {
-            // timer
-            var watch = new Stopwatch();
-            watch.Start();
+            System.Console.WriteLine($"GetCollection Start: {DateTime.Now.ToLongTimeString()}");
 
             // server
             var client = new MongoClient("mongodb://localhost:27017");
@@ -54,31 +120,25 @@ namespace Mongo.Console
             var database = client.GetDatabase("test-db");
 
             // table
-            var collection = database.GetCollection<TestEntity>("ItemMaster");
+            var collection = database.GetCollection<Product>("Product");
 
-            // stop timer
-            watch.Stop();
-            System.Console.WriteLine($"Connection, ElapsedTime:{watch.Elapsed.Milliseconds} ms");
+            System.Console.WriteLine($"GetCollection End: {DateTime.Now.ToLongTimeString()}");
 
             return collection;
         }
 
-        private static async Task UpsertAsync(IMongoCollection<TestEntity> collection, IEnumerable<TestEntity> list)
+        private static async Task UpsertAsync(IMongoCollection<Product> collection, IEnumerable<Product> list)
         {
-            // timer
-            var watch = new Stopwatch();
-            watch.Start();
+            System.Console.WriteLine($"InsertManyAsync Start: {DateTime.Now.ToLongTimeString()}");
 
             // add-or-update
             await collection.InsertManyAsync(list);
 
-            // stop timer
-            watch.Stop();
-            System.Console.WriteLine($"Save, ElapsedTime:{watch.Elapsed.Milliseconds} ms");
+            System.Console.WriteLine($"InsertManyAsync End: {DateTime.Now.ToLongTimeString()}");
         }
     }
 
-    public class TestEntity
+    public class Product
     {
         public string Code { get; set; }
         public string Name { get; set; }
