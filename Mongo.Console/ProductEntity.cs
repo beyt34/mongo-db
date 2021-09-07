@@ -1,6 +1,6 @@
 ﻿namespace Mongo.Console
 {
-    public class Product
+    public class ProductEntity
     {
         public string Code { get; set; }
         public string Name { get; set; }

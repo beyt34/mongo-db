@@ -9,7 +9,7 @@ namespace Mongo.Console
 {
     public static class BulkOperation
     {
-        private static readonly List<Product> Products = new();
+        private static readonly List<ProductEntity> Products = new();
 
         public static async Task BulkInsert()
         {
@@ -18,7 +18,7 @@ namespace Mongo.Console
 
         private static async Task ReadData()
         {
-            using var streamReader = new StreamReader(@"C:\Temp\sample.json");
+            using var streamReader = new StreamReader(Constants.FilePath);
             using var reader = new JsonTextReader(streamReader);
             var serializer = new JsonSerializer();
 
@@ -26,26 +26,25 @@ namespace Mongo.Console
             {
                 if (reader.TokenType == JsonToken.StartObject)
                 {
-                    var productData = serializer.Deserialize<Product>(reader);
-                    await ProcessProductData(productData);
+                    var productData = serializer.Deserialize<ProductEntity>(reader);
+                    await ProcessData(productData);
                 }
             }
         }
 
-        private static async Task ProcessProductData(Product productData)
+        private static async Task ProcessData(ProductEntity productEntity)
         {
-            Products.Add(productData);
+            Products.Add(productEntity);
 
             if (Products.Count % 1000 == 0)
             {
                 await UpsertAsync();
-                Products.Clear();
             }
         }
 
         private static async Task UpsertAsync()
         {
-            System.Console.WriteLine($"InsertManyAsync Start: {DateTime.Now:HH:mm:ss.fff}");
+            System.Console.WriteLine($"BulkOperation.InsertManyAsync Start: {DateTime.Now:HH:mm:ss.fff}");
 
             // get connection
             var collection = GetCollection();
@@ -53,19 +52,22 @@ namespace Mongo.Console
             // add-or-update
             await collection.InsertManyAsync(Products);
 
-            System.Console.WriteLine($"InsertManyAsync End: {DateTime.Now:HH:mm:ss.fff}");
+            // clear
+            Products.Clear();
+
+            System.Console.WriteLine($"BulkOperation.InsertManyAsync End: {DateTime.Now:HH:mm:ss.fff}");
         }
 
-        private static IMongoCollection<Product> GetCollection()
+        private static IMongoCollection<ProductEntity> GetCollection()
         {
             // server
-            var client = new MongoClient("mongodb://localhost:27017");
+            var client = new MongoClient(Constants.ConnectionString);
 
             // database
-            var database = client.GetDatabase("test-db");
+            var database = client.GetDatabase(Constants.Database);
 
             // table
-            var collection = database.GetCollection<Product>("Product");
+            var collection = database.GetCollection<ProductEntity>(Constants.Collection);
 
             // return collection
             return collection;
