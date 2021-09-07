@@ -26,16 +26,21 @@ namespace Mongo.Console
             {
                 if (reader.TokenType == JsonToken.StartObject)
                 {
+                    // process row by row
                     var productData = serializer.Deserialize<ProductEntity>(reader);
                     await ProcessData(productData);
                 }
             }
+
+            // add db left records
+            await UpsertAsync();
         }
 
         private static async Task ProcessData(ProductEntity productEntity)
         {
             Products.Add(productEntity);
 
+            // every 1000 records, add db
             if (Products.Count % 1000 == 0)
             {
                 await UpsertAsync();
