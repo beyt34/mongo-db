@@ -9,7 +9,7 @@ namespace Mongo.Console
 {
     public static class BulkOperation
     {
-        private static List<Product> _products = new();
+        private static readonly List<Product> Products = new();
 
         public static async Task BulkInsert()
         {
@@ -34,12 +34,12 @@ namespace Mongo.Console
 
         private static async Task ProcessProductData(Product productData)
         {
-            _products.Add(productData);
+            Products.Add(productData);
 
-            if (_products.Count % 1000 == 0)
+            if (Products.Count % 1000 == 0)
             {
                 await UpsertAsync();
-                _products.Clear();
+                Products.Clear();
             }
         }
 
@@ -51,7 +51,7 @@ namespace Mongo.Console
             var collection = GetCollection();
 
             // add-or-update
-            await collection.InsertManyAsync(_products);
+            await collection.InsertManyAsync(Products);
 
             System.Console.WriteLine($"InsertManyAsync End: {DateTime.Now:HH:mm:ss.fff}");
         }
