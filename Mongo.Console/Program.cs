@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoFixture;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Newtonsoft.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Mongo.Console
 {
@@ -15,27 +13,18 @@ namespace Mongo.Console
     {
         private const string filePath = @"C:\Temp\sample.json";
         private static List<Product> products = new();
-        private static List<WriteModel<Product>> productWriteModels = new();
+        
+        private static ReaderWriterLockSlim _lockSlim = new();
 
         static async Task Main(string[] args)
         {
             try
             {
-                System.Console.WriteLine($"Start: {DateTime.Now.ToLongTimeString()}");
+                System.Console.WriteLine($"Start: {DateTime.Now:HH:mm:ss.fff}");
 
-                //await WriteJson(1000000);
+                await BulkOperation.BulkInsert();
 
-                //var collection = GetCollection();
-                //var list = GetSampleData(100000);
-                //await UpsertAsync(collection, list);
-
-                //LoadJson();
-                //var collection = GetCollection();
-                //await UpsertAsync(collection, products);
-
-                await Bulk();
-
-                System.Console.WriteLine($"End: {DateTime.Now.ToLongTimeString()}");
+                System.Console.WriteLine($"End: {DateTime.Now:HH:mm:ss.fff}");
             }
             catch (Exception e)
             {
@@ -44,34 +33,6 @@ namespace Mongo.Console
             }
 
             System.Console.ReadKey();
-        }
-
-        private static async Task Bulk()
-        {
-            using var streamReader = new StreamReader(filePath);
-            using var reader = new JsonTextReader(streamReader);
-            var serializer = new Newtonsoft.Json.JsonSerializer();
-
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonToken.StartObject)
-                {
-                    var productData = serializer.Deserialize<Product>(reader);
-                    await ProcessProductData(productData);
-                }
-            }
-        }
-
-        private static async Task ProcessProductData(Product productData)
-        {
-            //System.Console.WriteLine($"productCode:{productData.Code}");
-            products.Add(productData);
-            if (products.Count % 10000 == 0)
-            {
-                var collection = GetCollection();
-                await UpsertAsync(collection, products);
-                products.Clear();
-            }
         }
 
         private static async Task WriteJson(int count)
@@ -85,13 +46,12 @@ namespace Mongo.Console
             System.Console.WriteLine($"WriteJson End: {DateTime.Now.ToLongTimeString()}");
         }
 
-        public static void LoadJson()
+        public static async Task LoadJson()
         {
             System.Console.WriteLine($"LoadJson Start: {DateTime.Now.ToLongTimeString()}");
 
-            using var streamReader = new StreamReader(filePath);
-            var jsonString = streamReader.ReadToEnd();
-            products = JsonSerializer.Deserialize<List<Product>>(jsonString);
+            var json = await new StreamReader(filePath).ReadToEndAsync();
+            products = JsonSerializer.Deserialize<List<Product>>(json);
 
             System.Console.WriteLine($"LoadJson Count: {products.Count}");
             System.Console.WriteLine($"LoadJson End: {DateTime.Now.ToLongTimeString()}");
@@ -101,13 +61,45 @@ namespace Mongo.Console
         {
             System.Console.WriteLine($"GetSampleData Start: {DateTime.Now.ToLongTimeString()}");
 
-            var fixture = new Fixture();
-            var list = fixture.CreateMany<Product>(count);
+            using var fileStream = File.Create(filePath);
+            using var streamWriter = new StreamWriter(fileStream);
+
+            var stepCount = count / 1;
+            var totalChunks = (int)Math.Ceiling(count / (float)stepCount);
+            Parallel.For(0, totalChunks, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            }, it =>
+            {
+                AddProductList(fileStream, streamWriter, it, stepCount);
+            });
+
+            System.Console.WriteLine($"Flush Start: {DateTime.Now.ToLongTimeString()}");
+            fileStream.Flush();
+            System.Console.WriteLine($"Flush End: {DateTime.Now.ToLongTimeString()}");
 
             System.Console.WriteLine($"GetSampleData End: {DateTime.Now.ToLongTimeString()}");
 
-            return list;
+            return products;
         }
+
+        private static void AddProductList(FileStream fileStream, StreamWriter streamWriter, int index, int count)
+        {
+            System.Console.WriteLine($"AddProductList Index:{index}, Start: {DateTime.Now.ToLongTimeString()}");
+            var fixture = new Fixture();
+            var list = fixture.CreateMany<Product>(count);
+
+            _lockSlim.EnterWriteLock();
+
+            var serialize = JsonSerializer.Serialize(list);
+            streamWriter.WriteLine(serialize);
+            //fileStream.Flush();
+
+            _lockSlim.ExitWriteLock();
+
+            System.Console.WriteLine($"AddProductList Index:{index}, End: {DateTime.Now.ToLongTimeString()}");
+        }
+
 
         private static IMongoCollection<Product> GetCollection()
         {
@@ -136,38 +128,5 @@ namespace Mongo.Console
 
             System.Console.WriteLine($"InsertManyAsync End: {DateTime.Now.ToLongTimeString()}");
         }
-    }
-
-    public class Product
-    {
-        public string Code { get; set; }
-        public string Name { get; set; }
-        public string Desc { get; set; }
-        public string AttributeA { get; set; }
-        public string AttributeB { get; set; }
-        public string AttributeC { get; set; }
-        public string AttributeD { get; set; }
-        public string AttributeE { get; set; }
-        public string AttributeF { get; set; }
-        public string AttributeG { get; set; }
-        public string AttributeH { get; set; }
-        public string AttributeI { get; set; }
-        public string AttributeJ { get; set; }
-        public string AttributeK { get; set; }
-        public string AttributeL { get; set; }
-        public string AttributeM { get; set; }
-        public string AttributeN { get; set; }
-        public string AttributeO { get; set; }
-        public string AttributeP { get; set; }
-        public string AttributeQ { get; set; }
-        public string AttributeR { get; set; }
-        public string AttributeS { get; set; }
-        public string AttributeT { get; set; }
-        public string AttributeU { get; set; }
-        public string AttributeV { get; set; }
-        public string AttributeW { get; set; }
-        public string AttributeX { get; set; }
-        public string AttributeY { get; set; }
-        public string AttributeZ { get; set; }
     }
 }
