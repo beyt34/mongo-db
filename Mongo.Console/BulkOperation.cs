@@ -10,7 +10,7 @@ namespace Mongo.Console
     public static class BulkOperation
     {
         private static int _total;
-        private static readonly List<ProductEntity> Products = new();
+        private static readonly List<ProductTempEntity> Products = new();
 
         public static async Task BulkInsert()
         {
@@ -28,7 +28,7 @@ namespace Mongo.Console
                 if (reader.TokenType == JsonToken.StartObject)
                 {
                     // process row by row
-                    var productData = serializer.Deserialize<ProductEntity>(reader);
+                    var productData = serializer.Deserialize<ProductTempEntity>(reader);
                     await ProcessData(productData);
                 }
             }
@@ -37,10 +37,10 @@ namespace Mongo.Console
             await UpsertAsync();
         }
 
-        private static async Task ProcessData(ProductEntity productEntity)
+        private static async Task ProcessData(ProductTempEntity productTempEntity)
         {
             _total++;
-            Products.Add(productEntity);
+            Products.Add(productTempEntity);
 
             // every 1000 records, add db
             if (Products.Count % 10000 == 0)
@@ -55,11 +55,13 @@ namespace Mongo.Console
             {
                 System.Console.WriteLine($"BulkOperation.InsertManyAsync Total:{_total} Start: {DateTime.Now:HH:mm:ss.fff}");
 
-                // get connection
-                var collection = GetCollection();
+                // get temp collection
+                var collection = GetCollection(Constants.CollectionProductTemp);
 
-                // add-or-update
+                // add temp
                 await collection.InsertManyAsync(Products);
+
+                // get product
 
                 // clear
                 Products.Clear();
@@ -68,7 +70,7 @@ namespace Mongo.Console
             }
         }
 
-        private static IMongoCollection<ProductEntity> GetCollection()
+        private static IMongoCollection<ProductTempEntity> GetCollection(string collectionName)
         {
             // server
             var client = new MongoClient(Constants.ConnectionString);
@@ -77,7 +79,7 @@ namespace Mongo.Console
             var database = client.GetDatabase(Constants.Database);
 
             // table
-            var collection = database.GetCollection<ProductEntity>(Constants.Collection);
+            var collection = database.GetCollection<ProductTempEntity>(collectionName);
 
             // return collection
             return collection;
