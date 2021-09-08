@@ -9,7 +9,7 @@ namespace Mongo.Console
 {
     public static class BulkOperation
     {
-        private static int _total = 0;
+        private static int _total;
         private static readonly List<ProductEntity> Products = new();
 
         public static async Task BulkInsert()
@@ -51,18 +51,21 @@ namespace Mongo.Console
 
         private static async Task UpsertAsync()
         {
-            System.Console.WriteLine($"BulkOperation.InsertManyAsync Total:{_total} Start: {DateTime.Now:HH:mm:ss.fff}");
+            if (Products.Count > 0)
+            {
+                System.Console.WriteLine($"BulkOperation.InsertManyAsync Total:{_total} Start: {DateTime.Now:HH:mm:ss.fff}");
 
-            // get connection
-            var collection = GetCollection();
+                // get connection
+                var collection = GetCollection();
 
-            // add-or-update
-            await collection.InsertManyAsync(Products);
+                // add-or-update
+                await collection.InsertManyAsync(Products);
 
-            // clear
-            Products.Clear();
+                // clear
+                Products.Clear();
 
-            System.Console.WriteLine($"BulkOperation.InsertManyAsync Total:{_total} End: {DateTime.Now:HH:mm:ss.fff}");
+                System.Console.WriteLine($"BulkOperation.InsertManyAsync Total:{_total} End: {DateTime.Now:HH:mm:ss.fff}");
+            }
         }
 
         private static IMongoCollection<ProductEntity> GetCollection()
