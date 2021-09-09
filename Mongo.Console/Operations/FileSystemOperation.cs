@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Mongo.Console
+namespace Mongo.Console.Operations
 {
     public class FileSystemOperation
     {

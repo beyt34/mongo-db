@@ -1,6 +1,6 @@
-﻿namespace Mongo.Console
+﻿namespace Mongo.Console.Entities
 {
-    public class ProductTempEntity
+    public class ProductTempEntity : BaseEntity
     {
         public string Code { get; set; }
         public string Name { get; set; }

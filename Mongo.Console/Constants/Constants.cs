@@ -1,4 +1,4 @@
-﻿namespace Mongo.Console
+﻿namespace Mongo.Console.Constants
 {
     public static class Constants
     {

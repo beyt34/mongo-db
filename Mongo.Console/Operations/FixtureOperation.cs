@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFixture;
+using Mongo.Console.Entities;
 
-namespace Mongo.Console
+namespace Mongo.Console.Operations
 {
     public static class FixtureOperation
     {
@@ -41,7 +42,9 @@ namespace Mongo.Console
 
             _lockSlim.EnterWriteLock();
 
-            var list = fixture.CreateMany<ProductTempEntity>(count);
+            //var list = fixture.CreateMany<ProductTempEntity>(count);
+            var list = fixture.Build<ProductTempEntity>().Without(p => p.Id).CreateMany(count);
+
             productEntities.AddRange(list);
 
             _lockSlim.ExitWriteLock();

@@ -7,8 +7,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="AutoFixture.AutoMoq" Version="4.17.0" />
+		<PackageReference Include="MappingGenerator" Version="2021.8.27" />
 		<PackageReference Include="MongoDB.Driver" Version="2.13.1" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Constants\" />
 	</ItemGroup>
 
 </Project>
