@@ -13,7 +13,7 @@ namespace Mongo.Console.Operations
     public static class BulkOperation
     {
         private static int _total;
-        private static readonly List<ProductTempEntity> ProductTemps = new();
+        private static readonly List<ProductTemp> ProductTemps = new();
 
         public static async Task BulkInsert()
         {
@@ -31,7 +31,7 @@ namespace Mongo.Console.Operations
                 if (reader.TokenType == JsonToken.StartObject)
                 {
                     // process row by row
-                    var productData = serializer.Deserialize<ProductTempEntity>(reader);
+                    var productData = serializer.Deserialize<ProductTemp>(reader);
                     await ProcessData(productData);
                 }
             }
@@ -40,12 +40,12 @@ namespace Mongo.Console.Operations
             await UpsertAsync();
         }
 
-        private static async Task ProcessData(ProductTempEntity productTempEntity)
+        private static async Task ProcessData(ProductTemp productTemp)
         {
             _total++;
-            ProductTemps.Add(productTempEntity);
+            ProductTemps.Add(productTemp);
 
-            // every 1000 records, add db
+            // every 10000 records, add db
             if (ProductTemps.Count % 10000 == 0)
             {
                 await UpsertAsync();
@@ -59,14 +59,14 @@ namespace Mongo.Console.Operations
                 System.Console.WriteLine($"BulkOperation.InsertManyAsync Total:{_total} Start: {DateTime.Now:HH:mm:ss.fff}");
 
                 // get collection
-                var collectionProductTemp = GetCollection<ProductTempEntity>(Constants.Constants.CollectionProductTemp);
-                var collectionProduct = GetCollection<ProductEntity>(Constants.Constants.CollectionProduct);
+                var collectionProductTemp = GetCollection<ProductTemp>(Constants.Constants.CollectionProductTemp);
+                var collectionProduct = GetCollection<Product>(Constants.Constants.CollectionProduct);
 
                 // add product temp
                 await collectionProductTemp.InsertManyAsync(ProductTemps);
 
                 // compare product
-                var newProducts = new List<ProductEntity>();
+                var newProducts = new List<Product>();
                 foreach (var productTemp in ProductTemps)
                 {
                     var product = await collectionProduct.Find(filter => filter.Code == productTemp.Code).FirstOrDefaultAsync();

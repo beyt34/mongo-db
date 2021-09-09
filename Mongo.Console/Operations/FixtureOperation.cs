@@ -9,10 +9,10 @@ namespace Mongo.Console.Operations
 {
     public static class FixtureOperation
     {
-        private static readonly List<ProductTempEntity> productEntities = new();
+        private static readonly List<ProductTemp> productEntities = new();
         private static readonly ReaderWriterLockSlim _lockSlim = new();
 
-        public static IEnumerable<ProductTempEntity> GetSampleData(int count)
+        public static IEnumerable<ProductTemp> GetSampleData(int count)
         {
             System.Console.WriteLine($"FixtureOperation.GetSampleData Start: {DateTime.Now:HH:mm:ss.fff}");
 
@@ -27,7 +27,7 @@ namespace Mongo.Console.Operations
             });
 
             //var fixture = new Fixture();
-            //var list = fixture.CreateMany<ProductTempEntity>(count);
+            //var list = fixture.CreateMany<ProductTemp>(count);
 
             System.Console.WriteLine($"FixtureOperation.GetSampleData End: {DateTime.Now:HH:mm:ss.fff}");
 
@@ -42,8 +42,8 @@ namespace Mongo.Console.Operations
 
             _lockSlim.EnterWriteLock();
 
-            //var list = fixture.CreateMany<ProductTempEntity>(count);
-            var list = fixture.Build<ProductTempEntity>().Without(p => p.Id).CreateMany(count);
+            //var list = fixture.CreateMany<ProductTemp>(count);
+            var list = fixture.Build<ProductTemp>().Without(p => p.Id).CreateMany(count);
 
             productEntities.AddRange(list);
 

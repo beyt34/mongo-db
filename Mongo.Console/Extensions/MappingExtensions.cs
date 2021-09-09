@@ -5,7 +5,7 @@ namespace Mongo.Console.Extensions
 {
     public static class MappingExtensions
     {
-        public static ProductEntity Map(this ProductTempEntity entity)
+        public static Product Map(this ProductTemp entity)
         {
             return new()
             {
