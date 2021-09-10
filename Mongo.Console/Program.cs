@@ -12,7 +12,7 @@ namespace Mongo.Console
             {
                 System.Console.WriteLine($"Start: {DateTime.Now:HH:mm:ss.fff}");
 
-                //await WriteOperation.WriteJson(10);
+                //await WriteOperation.WriteJson(1000111);
                 await BulkOperation.BulkInsert();
 
                 System.Console.WriteLine($"End: {DateTime.Now:HH:mm:ss.fff}");

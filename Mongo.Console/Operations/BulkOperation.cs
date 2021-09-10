@@ -65,11 +65,17 @@ namespace Mongo.Console.Operations
                 // add product temp
                 await collectionProductTemp.InsertManyAsync(ProductTemps);
 
+                // set codes
+                var codes = ProductTemps.Select(s => s.Code).ToList();
+
+                // get products
+                var products = await collectionProduct.Find(filter => codes.Contains(filter.Code)).ToListAsync();
+
                 // compare product
                 var newProducts = new List<Product>();
                 foreach (var productTemp in ProductTemps)
                 {
-                    var product = await collectionProduct.Find(filter => filter.Code == productTemp.Code).FirstOrDefaultAsync();
+                    var product = products.FirstOrDefault(f => f.Code == productTemp.Code);
                     if (product == null)
                     {
                         newProducts.Add(productTemp.Map());
